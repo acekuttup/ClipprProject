@@ -1,5 +1,6 @@
-import { Plus, Minus, Navigation, Sparkles, Lock } from "lucide-react";
+import { Plus, Minus, Navigation, Sparkles, Lock, ArrowUpRight } from "lucide-react";
 import { useClipperStore, fmtMoney, isSameDay, PAYMENT_METHOD_LABELS, CATEGORY_LABELS } from "@/lib/clipper-store";
+import { useCountUp } from "@/lib/use-count-up";
 
 interface Props {
   onLogIncome: () => void;
@@ -16,114 +17,115 @@ export function HomeScreen({ onLogIncome, onLogExpense, onLogMiles, onPremium }:
   const inToday = todaysIncome.reduce((s, e) => s + e.amount, 0);
   const outToday = todaysExpenses.reduce((s, e) => s + e.amount, 0);
   const net = inToday - outToday;
+  const animatedNet = useCountUp(net, 800);
   const reviewCount = store.incomeEntries.filter((e) => !e.confirmed).length;
 
-  const greet = (() => {
-    const h = today.getHours();
-    if (h < 12) return "Good morning";
-    if (h < 18) return "Good afternoon";
-    return "Good evening";
-  })();
+  const firstName = store.profile?.name?.split(" ")[0] ?? store.user?.name?.split(" ")[0] ?? "there";
 
   return (
-    <div className="space-y-5 pb-24">
-      <header className="pt-2">
-        <div className="text-xs uppercase tracking-[0.22em] text-brass">{greet}</div>
-        <h1 className="mt-1 font-display text-3xl leading-tight">
-          {store.profile?.name ? store.profile.name.split(" ")[0] : "Welcome"}
-        </h1>
-        <div className="mt-0.5 text-xs text-muted-foreground">
+    <div className="space-y-6 pb-28">
+      {/* Soft greeting */}
+      <header className="pt-6">
+        <div className="font-serif text-3xl leading-tight text-foreground/95">
+          Hello, <span className="text-brass">{firstName}</span>.
+        </div>
+        <div className="mt-1 font-mono text-[11px] text-muted-foreground">
           {today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
         </div>
       </header>
 
       {reviewCount > 0 && (
-        <div className="flex items-center gap-2 rounded-md border border-warning/30 bg-warning/10 p-3 text-sm">
-          <Sparkles className="h-4 w-4 text-warning" />
-          <span className="flex-1">
-            <strong>{reviewCount}</strong> transaction{reviewCount > 1 ? "s" : ""} waiting in Review Queue
+        <button
+          className="group flex w-full items-center gap-3 rounded-2xl border border-brass/20 bg-brass/[0.04] p-3 text-left transition hover:bg-brass/[0.08]"
+        >
+          <span className="relative">
+            <Sparkles className="h-4 w-4 text-brass" />
+            <span className="absolute -inset-2 -z-10 rounded-full bg-brass/20 blur-md breathe" />
           </span>
-        </div>
+          <span className="flex-1 text-sm">
+            <strong className="font-medium">{reviewCount}</strong>
+            <span className="text-muted-foreground"> transaction{reviewCount > 1 ? "s" : ""} awaiting review</span>
+          </span>
+          <ArrowUpRight className="h-4 w-4 text-muted-foreground transition group-hover:text-brass" />
+        </button>
       )}
 
-      {/* Hero net card */}
-      <div data-walkthrough="home-net" className="card-luxe relative overflow-hidden p-6">
-        <div className="pinstripe absolute inset-x-0 top-0 h-1 opacity-70" />
-        <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">In Your Pocket · today</div>
-        <div className="mt-2 font-display text-5xl tracking-tight brass-text">{fmtMoney(net)}</div>
-
-        <div className="mt-5 grid grid-cols-2 gap-3 border-t border-border/60 pt-4">
-          <div>
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">In</div>
-            <div className="font-display text-2xl text-success">{fmtMoney(inToday)}</div>
-            <div className="text-[10px] text-muted-foreground">{todaysIncome.length} cut{todaysIncome.length !== 1 ? "s" : ""}</div>
+      {/* Hero net card with ambient orb */}
+      <div data-walkthrough="home-net" className="relative overflow-hidden rounded-3xl border border-white/[0.05] bg-gradient-to-b from-card to-background p-7 shadow-card noise">
+        <div className="absolute -right-20 -top-20 h-60 w-60 rounded-full bg-brass/15 blur-3xl breathe" aria-hidden />
+        <div className="relative">
+          <div className="font-eyebrow">In your pocket · today</div>
+          <div className="mt-3 font-display text-[56px] font-light leading-none tracking-[-0.04em] tabular-nums">
+            <span className="text-foreground">${Math.floor(animatedNet).toLocaleString()}</span>
+            <span className="text-foreground/30">.{(Math.abs(animatedNet) % 1).toFixed(2).slice(2)}</span>
           </div>
-          <div>
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Out</div>
-            <div className="font-display text-2xl text-destructive">{fmtMoney(outToday)}</div>
-            <div className="text-[10px] text-muted-foreground">{todaysExpenses.length} expense{todaysExpenses.length !== 1 ? "s" : ""}</div>
+
+          <div className="mt-7 grid grid-cols-2 divide-x divide-white/[0.06]">
+            <MiniStat label="Earned" value={fmtMoney(inToday)} count={todaysIncome.length} unit="cut" tone="up" />
+            <MiniStat label="Spent" value={fmtMoney(outToday)} count={todaysExpenses.length} unit="item" tone="down" className="pl-5" />
           </div>
         </div>
       </div>
 
       {/* Actions */}
-      <div data-walkthrough="home-actions" className="grid grid-cols-3 gap-2.5">
-        <ActionBtn label="Income" sub="Log a cut" onClick={onLogIncome} variant="primary" icon={<Plus className="h-5 w-5" />} />
-        <ActionBtn label="Expense" sub="Add cost" onClick={onLogExpense} icon={<Minus className="h-5 w-5" />} />
-        <ActionBtn label="Miles" sub="Log trip" onClick={onLogMiles} icon={<Navigation className="h-5 w-5" />} />
+      <div data-walkthrough="home-actions" className="grid grid-cols-3 gap-2">
+        <ActionBtn label="Income" onClick={onLogIncome} variant="primary" icon={<Plus className="h-4 w-4" strokeWidth={2.5} />} />
+        <ActionBtn label="Expense" onClick={onLogExpense} icon={<Minus className="h-4 w-4" strokeWidth={2.5} />} />
+        <ActionBtn label="Mileage" onClick={onLogMiles} icon={<Navigation className="h-4 w-4" strokeWidth={2.5} />} />
       </div>
 
       {/* Profile snapshot */}
       {store.profile && (
-        <div className="card-luxe p-4">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-brass">Your craft</div>
-          <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-            <Stat label="Cuts/day" value={String(store.profile.avgCutsPerDay)} />
-            <Stat label="Avg rate" value={`$${store.profile.avgRate}`} />
-            <Stat label="Years" value={String(store.profile.yearsExperience ?? 0)} />
+        <Section title="Your craft">
+          <div className="grid grid-cols-3 gap-px overflow-hidden rounded-2xl bg-white/[0.04]">
+            <Tile label="Cuts / day" value={String(store.profile.avgCutsPerDay)} />
+            <Tile label="Avg rate" value={`$${store.profile.avgRate}`} />
+            <Tile label="Years" value={String(store.profile.yearsExperience ?? 0)} />
           </div>
-        </div>
+        </Section>
       )}
 
-      {/* Auto trip detection (Premium) */}
+      {/* Premium teaser */}
       <button
         onClick={() => onPremium("Auto trip detection")}
-        className="card-luxe flex w-full items-center gap-3 p-4 text-left tap-highlight"
+        className="group relative w-full overflow-hidden rounded-2xl border border-white/[0.05] bg-card p-4 text-left transition hover:border-brass/30"
       >
-        <div className="grid h-10 w-10 place-items-center rounded-full bg-brass/10">
-          <Navigation className="h-4 w-4 text-brass" />
-        </div>
-        <div className="flex-1">
-          <div className="text-sm font-medium">Auto Trip Detection</div>
-          <div className="text-xs text-muted-foreground">Never miss a deductible mile</div>
-        </div>
-        <div className="flex items-center gap-1 rounded-full bg-brass/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-brass">
-          <Lock className="h-3 w-3" /> Premium
+        <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-brass/[0.08] to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
+        <div className="relative flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-brass/10">
+            <Navigation className="h-4 w-4 text-brass" />
+          </div>
+          <div className="flex-1">
+            <div className="text-sm font-medium tracking-tight">Auto Trip Detection</div>
+            <div className="font-mono text-[10px] text-muted-foreground">Never miss a deductible mile</div>
+          </div>
+          <span className="inline-flex items-center gap-1 rounded-full border border-brass/30 px-2 py-0.5 font-mono text-[9px] tracking-wider text-brass">
+            <Lock className="h-2.5 w-2.5" /> PRO
+          </span>
         </div>
       </button>
 
-      {/* Recent today list */}
+      {/* Today's log */}
       {(todaysIncome.length > 0 || todaysExpenses.length > 0) && (
-        <div className="card-luxe p-4">
-          <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Today's log</div>
-          <div className="divide-y divide-border/60">
+        <Section title="Today">
+          <div className="divide-y divide-white/[0.04] rounded-2xl border border-white/[0.04] bg-card/40">
             {[...todaysIncome, ...todaysExpenses]
               .sort((a, b) => +new Date(b.date) - +new Date(a.date))
               .slice(0, 6)
               .map((e) => {
                 const isIncome = "paymentMethod" in e;
                 return (
-                  <div key={e.id} className="flex items-center justify-between py-2.5">
+                  <div key={e.id} className="flex items-center justify-between px-4 py-3">
                     <div>
-                      <div className="text-sm font-medium">
+                      <div className="text-sm tracking-tight">
                         {isIncome ? PAYMENT_METHOD_LABELS[e.paymentMethod] : CATEGORY_LABELS[e.category]}
                       </div>
-                      <div className="text-[11px] text-muted-foreground">
+                      <div className="mt-0.5 font-mono text-[10px] text-muted-foreground">
                         {new Date(e.date).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                         {isIncome && e.isTip && " · tip"}
                       </div>
                     </div>
-                    <div className={`font-display text-lg ${isIncome ? "text-success" : "text-destructive"}`}>
+                    <div className={`font-mono text-sm tabular-nums ${isIncome ? "text-brass" : "text-foreground/80"}`}>
                       {isIncome ? "+" : "−"}
                       {fmtMoney(e.amount)}
                     </div>
@@ -131,30 +133,65 @@ export function HomeScreen({ onLogIncome, onLogExpense, onLogMiles, onPremium }:
                 );
               })}
           </div>
-        </div>
+        </Section>
       )}
     </div>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function MiniStat({
+  label,
+  value,
+  count,
+  unit,
+  tone,
+  className,
+}: {
+  label: string;
+  value: string;
+  count: number;
+  unit: string;
+  tone: "up" | "down";
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <div className="font-eyebrow">{label}</div>
+      <div className={`mt-1 font-display text-2xl font-light tabular-nums ${tone === "up" ? "text-brass" : "text-foreground/85"}`}>
+        {value}
+      </div>
+      <div className="mt-0.5 font-mono text-[10px] text-muted-foreground">
+        {count} {unit}{count !== 1 ? "s" : ""}
+      </div>
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="font-display text-2xl">{value}</div>
-      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
+      <div className="mb-2 font-eyebrow">{title}</div>
+      {children}
+    </div>
+  );
+}
+
+function Tile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-card p-4 text-center">
+      <div className="font-display text-2xl font-light tracking-tight">{value}</div>
+      <div className="mt-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">{label}</div>
     </div>
   );
 }
 
 function ActionBtn({
   label,
-  sub,
   onClick,
   variant,
   icon,
 }: {
   label: string;
-  sub: string;
   onClick: () => void;
   variant?: "primary";
   icon: React.ReactNode;
@@ -162,21 +199,20 @@ function ActionBtn({
   return (
     <button
       onClick={onClick}
-      className={`flex h-24 flex-col items-start justify-between rounded-md p-3 text-left tap-highlight active:scale-[0.98] transition ${
+      className={`group relative flex h-20 flex-col items-start justify-between overflow-hidden rounded-2xl p-3 text-left tap-highlight transition-all duration-300 active:scale-[0.97] ${
         variant === "primary"
-          ? "bg-gradient-to-br from-brass to-[oklch(0.55_0.16_148)] text-brass-foreground shadow-luxe"
-          : "card-luxe text-foreground"
+          ? "bg-brass text-brass-foreground shadow-[0_8px_24px_-12px_var(--color-brass)]"
+          : "border border-white/[0.06] bg-card text-foreground hover:border-white/[0.12] hover:bg-card/80"
       }`}
     >
-      <div className={`grid h-8 w-8 place-items-center rounded-full ${variant === "primary" ? "bg-black/15" : "bg-brass/10 text-brass"}`}>
+      <span
+        className={`grid h-7 w-7 place-items-center rounded-full transition-transform duration-300 group-hover:scale-110 ${
+          variant === "primary" ? "bg-black/15" : "bg-brass/10 text-brass"
+        }`}
+      >
         {icon}
-      </div>
-      <div>
-        <div className="text-sm font-semibold">{label}</div>
-        <div className={`text-[10px] uppercase tracking-wider ${variant === "primary" ? "opacity-70" : "text-muted-foreground"}`}>
-          {sub}
-        </div>
-      </div>
+      </span>
+      <span className="text-[13px] font-medium tracking-tight">{label}</span>
     </button>
   );
 }
