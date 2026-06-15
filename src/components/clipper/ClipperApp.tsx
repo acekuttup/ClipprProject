@@ -131,20 +131,24 @@ function TabBtn({
     <button
       data-walkthrough={`tab-${id}`}
       onClick={() => onClick(id)}
-      className={`relative flex flex-col items-center justify-center gap-0.5 py-2.5 tap-highlight transition ${
-        isActive ? "text-brass" : "text-muted-foreground"
+      className={`group relative flex flex-col items-center justify-center gap-1 py-2.5 tap-highlight transition-colors duration-300 ${
+        isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground/80"
       }`}
     >
-      <span className="relative">
+      <span className="relative transition-transform duration-300 group-active:scale-90">
         {icon}
         {badge !== undefined && (
-          <span className="absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-warning px-1 text-[9px] font-bold text-warning-foreground">
+          <span className="absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-brass px-1 font-mono text-[9px] font-medium text-brass-foreground">
             {badge}
           </span>
         )}
       </span>
-      <span className="text-[10px] font-medium uppercase tracking-wider">{label}</span>
-      {isActive && <span className="absolute -top-px h-0.5 w-8 rounded-full bg-brass" />}
+      <span className="text-[10px] font-medium tracking-tight">{label}</span>
+      <span
+        className={`absolute -top-px h-px w-10 rounded-full bg-gradient-to-r from-transparent via-brass to-transparent transition-all duration-500 ${
+          isActive ? "opacity-100" : "opacity-0"
+        }`}
+      />
     </button>
   );
 }
