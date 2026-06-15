@@ -36,14 +36,14 @@ export function ClipperApp() {
 
   const switchTab = (next: Tab) => {
     if (next === tab) return;
-    // @ts-expect-error - startViewTransition is not in older TS DOM lib
-    if (typeof document !== "undefined" && document.startViewTransition) {
-      // @ts-expect-error - same
-      document.startViewTransition(() => setTab(next));
+    const doc = document as Document & { startViewTransition?: (cb: () => void) => void };
+    if (typeof doc.startViewTransition === "function") {
+      doc.startViewTransition(() => setTab(next));
     } else {
       setTab(next);
     }
   };
+
 
 
   return (
