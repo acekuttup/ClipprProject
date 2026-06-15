@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Home, History, Inbox, FileText, Settings as SettingsIcon, Scissors } from "lucide-react";
+import { Home, History, Inbox, FileText, Settings as SettingsIcon } from "lucide-react";
 import { useClipperStore } from "@/lib/clipper-store";
 import { OnboardingFlow } from "@/components/clipper/Onboarding";
 import { AuthModal } from "@/components/clipper/AuthModal";
@@ -11,6 +11,7 @@ import { TaxesScreen } from "@/components/clipper/TaxesScreen";
 import { SettingsScreen } from "@/components/clipper/SettingsScreen";
 import { LogIncomeModal, LogExpenseModal, LogMilesModal } from "@/components/clipper/LogModals";
 import { PremiumModal, usePremiumGate } from "@/components/clipper/PremiumModal";
+import { ClipperMark, ClipperWordmark } from "@/components/clipper/Logo";
 
 type Tab = "home" | "history" | "review" | "taxes" | "settings";
 
@@ -33,56 +34,67 @@ export function ClipperApp() {
 
   const reviewCount = store.incomeEntries.filter((e) => !e.confirmed).length;
 
+  const switchTab = (next: Tab) => {
+    if (next === tab) return;
+    const doc = document as Document & { startViewTransition?: (cb: () => void) => void };
+    if (typeof doc.startViewTransition === "function") {
+      doc.startViewTransition(() => setTab(next));
+    } else {
+      setTab(next);
+    }
+  };
+
+
+
   return (
     <div className="relative mx-auto min-h-screen w-full max-w-[480px]">
       {/* Top header bar */}
-      <div className="sticky top-0 z-20 border-b border-border/60 bg-background/85 px-5 py-3 backdrop-blur-xl">
+      <div className="sticky top-0 z-20 border-b border-white/[0.04] bg-background/70 px-5 py-3.5 backdrop-blur-2xl">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-brass to-oxblood">
-              <Scissors className="h-3.5 w-3.5 text-brass-foreground" />
-            </div>
-            <div className="font-display text-lg tracking-wide brass-text">Clipper</div>
+          <div className="flex items-center gap-2.5">
+            <ClipperMark size={26} className="text-brass" />
+            <ClipperWordmark />
           </div>
-          <div className="pinstripe h-0.5 flex-1 mx-3 opacity-50" />
-          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-            {store.user?.isPremium ? "Premium" : "Free"}
+          <div className="flex items-center gap-1.5">
+            <span className={`h-1.5 w-1.5 rounded-full ${store.user?.isPremium ? "bg-brass shadow-[0_0_8px_var(--color-brass)]" : "bg-muted-foreground/50"}`} />
+            <span className="font-eyebrow text-[9px]">{store.user?.isPremium ? "Premium" : "Free"}</span>
           </div>
         </div>
       </div>
 
       {/* Screen */}
       <main className="px-5">
-        {tab === "home" && (
-          <HomeScreen
-            onLogIncome={() => setLogIncome(true)}
-            onLogExpense={() => setLogExpense(true)}
-            onLogMiles={() => setLogMiles(true)}
-            onPremium={premium.gate}
-          />
-        )}
-        {tab === "history" && <HistoryScreen />}
-        {tab === "review" && <ReviewScreen onPremium={premium.gate} />}
-        {tab === "taxes" && <TaxesScreen onPremium={premium.gate} />}
-        {tab === "settings" && <SettingsScreen onAuth={() => setAuthOpen(true)} onPremium={premium.gate} />}
+        <div key={tab} className="rise-in" style={{ viewTransitionName: "tab-pane" } as React.CSSProperties}>
+          {tab === "home" && (
+            <HomeScreen
+              onLogIncome={() => setLogIncome(true)}
+              onLogExpense={() => setLogExpense(true)}
+              onLogMiles={() => setLogMiles(true)}
+              onPremium={premium.gate}
+            />
+          )}
+          {tab === "history" && <HistoryScreen />}
+          {tab === "review" && <ReviewScreen onPremium={premium.gate} />}
+          {tab === "taxes" && <TaxesScreen onPremium={premium.gate} />}
+          {tab === "settings" && <SettingsScreen onAuth={() => setAuthOpen(true)} onPremium={premium.gate} />}
+        </div>
       </main>
 
       {/* Bottom tab bar */}
-      <nav className="fixed bottom-0 left-1/2 z-30 w-full max-w-[480px] -translate-x-1/2 border-t border-border/60 bg-background/95 backdrop-blur-xl">
-        <div className="pinstripe h-0.5 w-full opacity-40" />
+      <nav className="fixed bottom-0 left-1/2 z-30 w-full max-w-[480px] -translate-x-1/2 border-t border-white/[0.04] bg-background/80 backdrop-blur-2xl">
         <div className="grid grid-cols-5">
-          <TabBtn id="home" active={tab} onClick={setTab} label="Home" icon={<Home className="h-5 w-5" />} />
-          <TabBtn id="history" active={tab} onClick={setTab} label="History" icon={<History className="h-5 w-5" />} />
+          <TabBtn id="home" active={tab} onClick={switchTab} label="Home" icon={<Home className="h-[18px] w-[18px]" />} />
+          <TabBtn id="history" active={tab} onClick={switchTab} label="Activity" icon={<History className="h-[18px] w-[18px]" />} />
           <TabBtn
             id="review"
             active={tab}
-            onClick={setTab}
+            onClick={switchTab}
             label="Review"
-            icon={<Inbox className="h-5 w-5" />}
+            icon={<Inbox className="h-[18px] w-[18px]" />}
             badge={reviewCount > 0 ? reviewCount : undefined}
           />
-          <TabBtn id="taxes" active={tab} onClick={setTab} label="Taxes" icon={<FileText className="h-5 w-5" />} />
-          <TabBtn id="settings" active={tab} onClick={setTab} label="Settings" icon={<SettingsIcon className="h-5 w-5" />} />
+          <TabBtn id="taxes" active={tab} onClick={switchTab} label="Taxes" icon={<FileText className="h-[18px] w-[18px]" />} />
+          <TabBtn id="settings" active={tab} onClick={switchTab} label="Settings" icon={<SettingsIcon className="h-[18px] w-[18px]" />} />
         </div>
         <div style={{ height: "env(safe-area-inset-bottom)" }} />
       </nav>
@@ -119,20 +131,24 @@ function TabBtn({
     <button
       data-walkthrough={`tab-${id}`}
       onClick={() => onClick(id)}
-      className={`relative flex flex-col items-center justify-center gap-0.5 py-2.5 tap-highlight transition ${
-        isActive ? "text-brass" : "text-muted-foreground"
+      className={`group relative flex flex-col items-center justify-center gap-1 py-2.5 tap-highlight transition-colors duration-300 ${
+        isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground/80"
       }`}
     >
-      <span className="relative">
+      <span className="relative transition-transform duration-300 group-active:scale-90">
         {icon}
         {badge !== undefined && (
-          <span className="absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-warning px-1 text-[9px] font-bold text-warning-foreground">
+          <span className="absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-brass px-1 font-mono text-[9px] font-medium text-brass-foreground">
             {badge}
           </span>
         )}
       </span>
-      <span className="text-[10px] font-medium uppercase tracking-wider">{label}</span>
-      {isActive && <span className="absolute -top-px h-0.5 w-8 rounded-full bg-brass" />}
+      <span className="text-[10px] font-medium tracking-tight">{label}</span>
+      <span
+        className={`absolute -top-px h-px w-10 rounded-full bg-gradient-to-r from-transparent via-brass to-transparent transition-all duration-500 ${
+          isActive ? "opacity-100" : "opacity-0"
+        }`}
+      />
     </button>
   );
 }

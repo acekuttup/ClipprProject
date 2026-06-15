@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Scissors, ChevronRight, Check } from "lucide-react";
+import { ChevronRight, Check } from "lucide-react";
 import { useClipperStore, PAYMENT_METHOD_LABELS, type PaymentMethod } from "@/lib/clipper-store";
+import { ClipperMark } from "@/components/clipper/Logo";
 
 export function OnboardingFlow() {
   const [store, setStore] = useClipperStore();
@@ -33,19 +34,23 @@ export function OnboardingFlow() {
       <div className="pinstripe h-1 w-full opacity-60" />
       <div className="flex-1 overflow-y-auto px-6 pb-8 pt-10">
         {step === 0 && (
-          <div className="mx-auto max-w-md text-center">
-            <div className="mx-auto mb-6 grid h-20 w-20 place-items-center rounded-full bg-gradient-to-br from-brass to-oxblood shadow-luxe">
-              <Scissors className="h-9 w-9 text-brass-foreground" />
+          <div className="mx-auto max-w-md text-center rise-in">
+            <div className="relative mx-auto mb-8 grid h-24 w-24 place-items-center">
+              <div className="absolute inset-0 rounded-3xl bg-brass/20 blur-2xl breathe" aria-hidden />
+              <div className="relative grid h-20 w-20 place-items-center rounded-2xl border border-white/10 bg-card">
+                <ClipperMark size={44} className="text-brass" />
+              </div>
             </div>
-            <h1 className="font-display text-4xl leading-tight">
-              <span className="brass-text">Clipper</span>
+            <h1 className="font-display text-[44px] font-light leading-[1.05] tracking-[-0.04em]">
+              Built for <span className="font-serif text-brass">the chair</span>.
             </h1>
-            <p className="mt-1 text-sm uppercase tracking-[0.25em] text-muted-foreground">Barber Finance, sharpened</p>
-            <p className="mt-6 text-base text-foreground/85">
-              The only books a self-employed barber actually needs. Daily income, expenses, mileage, and a real
-              Schedule C export.
+            <p className="mx-auto mt-5 max-w-[280px] text-[15px] leading-relaxed text-foreground/70">
+              Quiet bookkeeping for self-employed barbers. Daily income, expenses, mileage — and a Schedule&nbsp;C export
+              your preparer will actually thank you for.
             </p>
-            <p className="mt-3 text-sm text-muted-foreground">No bank login. No accountant. About 2 minutes to set up.</p>
+            <div className="mt-8 inline-flex items-center gap-2 rounded-full border border-white/10 bg-card/60 px-3 py-1.5 font-mono text-[10px] text-muted-foreground">
+              <span className="h-1.5 w-1.5 rounded-full bg-brass" /> No bank login · ~2 min to set up
+            </div>
           </div>
         )}
 
