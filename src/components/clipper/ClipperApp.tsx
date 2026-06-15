@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Home, History, Inbox, FileText, Settings as SettingsIcon, Scissors } from "lucide-react";
+import { Home, History, Inbox, FileText, Settings as SettingsIcon } from "lucide-react";
 import { useClipperStore } from "@/lib/clipper-store";
 import { OnboardingFlow } from "@/components/clipper/Onboarding";
 import { AuthModal } from "@/components/clipper/AuthModal";
@@ -11,6 +11,7 @@ import { TaxesScreen } from "@/components/clipper/TaxesScreen";
 import { SettingsScreen } from "@/components/clipper/SettingsScreen";
 import { LogIncomeModal, LogExpenseModal, LogMilesModal } from "@/components/clipper/LogModals";
 import { PremiumModal, usePremiumGate } from "@/components/clipper/PremiumModal";
+import { ClipperMark, ClipperWordmark } from "@/components/clipper/Logo";
 
 type Tab = "home" | "history" | "review" | "taxes" | "settings";
 
