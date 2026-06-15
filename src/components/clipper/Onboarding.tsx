@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Scissors, ChevronRight, Check } from "lucide-react";
+import { ChevronRight, Check } from "lucide-react";
 import { useClipperStore, PAYMENT_METHOD_LABELS, type PaymentMethod } from "@/lib/clipper-store";
+import { ClipperMark } from "@/components/clipper/Logo";
 
 export function OnboardingFlow() {
   const [store, setStore] = useClipperStore();
