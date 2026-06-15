@@ -52,36 +52,37 @@ export function ClipperApp() {
 
       {/* Screen */}
       <main className="px-5">
-        {tab === "home" && (
-          <HomeScreen
-            onLogIncome={() => setLogIncome(true)}
-            onLogExpense={() => setLogExpense(true)}
-            onLogMiles={() => setLogMiles(true)}
-            onPremium={premium.gate}
-          />
-        )}
-        {tab === "history" && <HistoryScreen />}
-        {tab === "review" && <ReviewScreen onPremium={premium.gate} />}
-        {tab === "taxes" && <TaxesScreen onPremium={premium.gate} />}
-        {tab === "settings" && <SettingsScreen onAuth={() => setAuthOpen(true)} onPremium={premium.gate} />}
+        <div key={tab} className="rise-in" style={{ viewTransitionName: "tab-pane" } as React.CSSProperties}>
+          {tab === "home" && (
+            <HomeScreen
+              onLogIncome={() => setLogIncome(true)}
+              onLogExpense={() => setLogExpense(true)}
+              onLogMiles={() => setLogMiles(true)}
+              onPremium={premium.gate}
+            />
+          )}
+          {tab === "history" && <HistoryScreen />}
+          {tab === "review" && <ReviewScreen onPremium={premium.gate} />}
+          {tab === "taxes" && <TaxesScreen onPremium={premium.gate} />}
+          {tab === "settings" && <SettingsScreen onAuth={() => setAuthOpen(true)} onPremium={premium.gate} />}
+        </div>
       </main>
 
       {/* Bottom tab bar */}
-      <nav className="fixed bottom-0 left-1/2 z-30 w-full max-w-[480px] -translate-x-1/2 border-t border-border/60 bg-background/95 backdrop-blur-xl">
-        <div className="pinstripe h-0.5 w-full opacity-40" />
+      <nav className="fixed bottom-0 left-1/2 z-30 w-full max-w-[480px] -translate-x-1/2 border-t border-white/[0.04] bg-background/80 backdrop-blur-2xl">
         <div className="grid grid-cols-5">
-          <TabBtn id="home" active={tab} onClick={setTab} label="Home" icon={<Home className="h-5 w-5" />} />
-          <TabBtn id="history" active={tab} onClick={setTab} label="History" icon={<History className="h-5 w-5" />} />
+          <TabBtn id="home" active={tab} onClick={switchTab} label="Home" icon={<Home className="h-[18px] w-[18px]" />} />
+          <TabBtn id="history" active={tab} onClick={switchTab} label="Activity" icon={<History className="h-[18px] w-[18px]" />} />
           <TabBtn
             id="review"
             active={tab}
-            onClick={setTab}
+            onClick={switchTab}
             label="Review"
-            icon={<Inbox className="h-5 w-5" />}
+            icon={<Inbox className="h-[18px] w-[18px]" />}
             badge={reviewCount > 0 ? reviewCount : undefined}
           />
-          <TabBtn id="taxes" active={tab} onClick={setTab} label="Taxes" icon={<FileText className="h-5 w-5" />} />
-          <TabBtn id="settings" active={tab} onClick={setTab} label="Settings" icon={<SettingsIcon className="h-5 w-5" />} />
+          <TabBtn id="taxes" active={tab} onClick={switchTab} label="Taxes" icon={<FileText className="h-[18px] w-[18px]" />} />
+          <TabBtn id="settings" active={tab} onClick={switchTab} label="Settings" icon={<SettingsIcon className="h-[18px] w-[18px]" />} />
         </div>
         <div style={{ height: "env(safe-area-inset-bottom)" }} />
       </nav>
