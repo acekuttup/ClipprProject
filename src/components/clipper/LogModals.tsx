@@ -129,7 +129,7 @@ export function LogIncomeModal({ open, onClose }: { open: boolean; onClose: () =
       <button
         onClick={save}
         disabled={amt.num <= 0}
-        className="mt-4 h-12 w-full rounded-md bg-gradient-to-r from-brass to-[oklch(0.6_0.13_55)] font-semibold text-brass-foreground shadow-luxe tap-highlight disabled:opacity-40"
+        className="mt-4 h-12 w-full rounded-md bg-gradient-to-r from-brass to-[oklch(0.62_0.18_150)] font-semibold text-brass-foreground shadow-luxe tap-highlight disabled:opacity-40"
       >
         Save income
       </button>
@@ -197,7 +197,7 @@ export function LogExpenseModal({ open, onClose }: { open: boolean; onClose: () 
       <button
         onClick={save}
         disabled={amt.num <= 0}
-        className="mt-4 h-12 w-full rounded-md bg-gradient-to-r from-brass to-[oklch(0.6_0.13_55)] font-semibold text-brass-foreground shadow-luxe disabled:opacity-40"
+        className="mt-4 h-12 w-full rounded-md bg-gradient-to-r from-brass to-[oklch(0.62_0.18_150)] font-semibold text-brass-foreground shadow-luxe disabled:opacity-40"
       >
         Save expense
       </button>
@@ -285,7 +285,7 @@ export function LogMilesModal({ open, onClose }: { open: boolean; onClose: () =>
           <button
             onClick={save}
             disabled={!Number(miles)}
-            className="mt-4 h-12 w-full rounded-md bg-gradient-to-r from-brass to-[oklch(0.6_0.13_55)] font-semibold text-brass-foreground shadow-luxe disabled:opacity-40"
+            className="mt-4 h-12 w-full rounded-md bg-gradient-to-r from-brass to-[oklch(0.62_0.18_150)] font-semibold text-brass-foreground shadow-luxe disabled:opacity-40"
           >
             Save trip
           </button>

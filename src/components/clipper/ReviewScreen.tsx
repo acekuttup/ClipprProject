@@ -68,7 +68,7 @@ export function ReviewScreen({ onPremium }: { onPremium: (f?: string) => void })
           </p>
           <button
             onClick={() => onPremium("Bank-sync Review Queue")}
-            className="h-11 w-full rounded-md bg-gradient-to-r from-brass to-[oklch(0.6_0.13_55)] font-semibold text-brass-foreground shadow-luxe"
+            className="h-11 w-full rounded-md bg-gradient-to-r from-brass to-[oklch(0.62_0.18_150)] font-semibold text-brass-foreground shadow-luxe"
           >
             Unlock auto-sync
           </button>
@@ -108,7 +108,7 @@ export function ReviewScreen({ onPremium }: { onPremium: (f?: string) => void })
             </button>
             <button
               onClick={() => classify(e.id, true)}
-              className="h-11 rounded-md bg-gradient-to-r from-brass to-[oklch(0.6_0.13_55)] text-sm font-semibold text-brass-foreground tap-highlight"
+              className="h-11 rounded-md bg-gradient-to-r from-brass to-[oklch(0.62_0.18_150)] text-sm font-semibold text-brass-foreground tap-highlight"
             >
               Business
             </button>
