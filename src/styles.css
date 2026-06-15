@@ -35,14 +35,15 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --font-display: "Instrument Serif", "Playfair Display", Georgia, serif;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
-  --shadow-luxe: 0 24px 70px -28px color-mix(in oklab, var(--brass) 55%, transparent), 0 0 0 1px color-mix(in oklab, var(--brass) 22%, transparent);
-  --shadow-card: 0 1px 0 0 color-mix(in oklab, var(--brass) 8%, transparent) inset, 0 24px 50px -28px rgba(0,0,0,0.7);
-  --gradient-brass: linear-gradient(135deg, oklch(0.92 0.18 155) 0%, oklch(0.78 0.21 152) 45%, oklch(0.55 0.18 150) 100%);
-  --gradient-surface: linear-gradient(180deg, oklch(0.16 0.012 160) 0%, oklch(0.11 0.008 160) 100%);
-  --gradient-onyx: radial-gradient(ellipse 80% 60% at 50% 0%, oklch(0.19 0.025 155) 0%, oklch(0.08 0.006 160) 60%, oklch(0.06 0.004 160) 100%);
+  --font-display: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --font-serif: "Fraunces", Georgia, serif;
+  --shadow-luxe: 0 30px 80px -32px color-mix(in oklab, var(--brass) 50%, transparent), 0 0 0 1px color-mix(in oklab, var(--brass) 18%, transparent);
+  --shadow-card: 0 1px 0 0 oklch(1 0 0 / 4%) inset, 0 20px 50px -28px rgba(0,0,0,0.75);
+  --gradient-brass: linear-gradient(135deg, oklch(0.95 0.16 155) 0%, oklch(0.82 0.2 152) 50%, oklch(0.62 0.18 150) 100%);
+  --gradient-surface: linear-gradient(180deg, oklch(0.145 0.012 160) 0%, oklch(0.105 0.008 160) 100%);
+  --gradient-onyx: radial-gradient(ellipse 90% 50% at 50% 0%, oklch(0.16 0.018 155) 0%, oklch(0.08 0.005 160) 55%, oklch(0.055 0.003 160) 100%);
 }
 
 :root {
