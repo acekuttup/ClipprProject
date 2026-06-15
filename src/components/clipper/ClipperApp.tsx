@@ -34,6 +34,18 @@ export function ClipperApp() {
 
   const reviewCount = store.incomeEntries.filter((e) => !e.confirmed).length;
 
+  const switchTab = (next: Tab) => {
+    if (next === tab) return;
+    // @ts-expect-error - startViewTransition is not in older TS DOM lib
+    if (typeof document !== "undefined" && document.startViewTransition) {
+      // @ts-expect-error - same
+      document.startViewTransition(() => setTab(next));
+    } else {
+      setTab(next);
+    }
+  };
+
+
   return (
     <div className="relative mx-auto min-h-screen w-full max-w-[480px]">
       {/* Top header bar */}
