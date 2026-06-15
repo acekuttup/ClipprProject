@@ -37,17 +37,15 @@ export function ClipperApp() {
   return (
     <div className="relative mx-auto min-h-screen w-full max-w-[480px]">
       {/* Top header bar */}
-      <div className="sticky top-0 z-20 border-b border-border/60 bg-background/85 px-5 py-3 backdrop-blur-xl">
+      <div className="sticky top-0 z-20 border-b border-white/[0.04] bg-background/70 px-5 py-3.5 backdrop-blur-2xl">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-brass to-oxblood">
-              <Scissors className="h-3.5 w-3.5 text-brass-foreground" />
-            </div>
-            <div className="font-display text-lg tracking-wide brass-text">Clipper</div>
+          <div className="flex items-center gap-2.5">
+            <ClipperMark size={26} className="text-brass" />
+            <ClipperWordmark />
           </div>
-          <div className="pinstripe h-0.5 flex-1 mx-3 opacity-50" />
-          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-            {store.user?.isPremium ? "Premium" : "Free"}
+          <div className="flex items-center gap-1.5">
+            <span className={`h-1.5 w-1.5 rounded-full ${store.user?.isPremium ? "bg-brass shadow-[0_0_8px_var(--color-brass)]" : "bg-muted-foreground/50"}`} />
+            <span className="font-eyebrow text-[9px]">{store.user?.isPremium ? "Premium" : "Free"}</span>
           </div>
         </div>
       </div>
