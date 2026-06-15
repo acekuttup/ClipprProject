@@ -51,7 +51,7 @@ export function PremiumModal({ open, onClose, feature }: { open: boolean; onClos
         <div className="text-xs text-muted-foreground">Or $79/year · save 27%</div>
         <button
           onClick={upgrade}
-          className="mt-5 h-12 w-full rounded-md bg-gradient-to-r from-brass to-[oklch(0.6_0.13_55)] font-semibold text-brass-foreground shadow-luxe tap-highlight active:scale-[0.99]"
+          className="mt-5 h-12 w-full rounded-md bg-gradient-to-r from-brass to-[oklch(0.62_0.18_150)] font-semibold text-brass-foreground shadow-luxe tap-highlight active:scale-[0.99]"
         >
           Start 7-day free trial
         </button>

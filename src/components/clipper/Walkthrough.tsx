@@ -115,7 +115,7 @@ export function Walkthrough() {
           </button>
           <button
             onClick={next}
-            className="inline-flex h-10 items-center gap-1.5 rounded-md bg-gradient-to-r from-brass to-[oklch(0.6_0.13_55)] px-4 text-sm font-semibold text-brass-foreground tap-highlight active:scale-[0.98]"
+            className="inline-flex h-10 items-center gap-1.5 rounded-md bg-gradient-to-r from-brass to-[oklch(0.62_0.18_150)] px-4 text-sm font-semibold text-brass-foreground tap-highlight active:scale-[0.98]"
           >
             {i === STEPS.length - 1 ? "Finish" : "Next"}
             <ChevronRight className="h-4 w-4" />

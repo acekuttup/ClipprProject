@@ -164,7 +164,7 @@ function ActionBtn({
       onClick={onClick}
       className={`flex h-24 flex-col items-start justify-between rounded-md p-3 text-left tap-highlight active:scale-[0.98] transition ${
         variant === "primary"
-          ? "bg-gradient-to-br from-brass to-[oklch(0.55_0.12_50)] text-brass-foreground shadow-luxe"
+          ? "bg-gradient-to-br from-brass to-[oklch(0.55_0.16_148)] text-brass-foreground shadow-luxe"
           : "card-luxe text-foreground"
       }`}
     >

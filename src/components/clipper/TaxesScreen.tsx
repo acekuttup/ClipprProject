@@ -103,7 +103,7 @@ export function TaxesScreen({ onPremium }: { onPremium: (f?: string) => void }) 
                   <span className="font-display">{fmtMoney(v)}</span>
                 </div>
                 <div className="mt-1 h-1 rounded-full bg-muted">
-                  <div className="h-full rounded-full bg-gradient-to-r from-brass to-[oklch(0.5_0.11_50)]" style={{ width: `${pct}%` }} />
+                  <div className="h-full rounded-full bg-gradient-to-r from-brass to-[oklch(0.5_0.15_148)]" style={{ width: `${pct}%` }} />
                 </div>
                 <div className="mt-1 text-[10px] text-muted-foreground">{note}</div>
               </div>

@@ -143,7 +143,7 @@ export function OnboardingFlow() {
           )}
           <button
             onClick={() => (step === 3 ? finish() : setStep(step + 1))}
-            className="ml-auto inline-flex h-12 flex-1 items-center justify-center gap-1.5 rounded-md bg-gradient-to-r from-brass to-[oklch(0.6_0.13_55)] font-semibold text-brass-foreground shadow-luxe tap-highlight active:scale-[0.99]"
+            className="ml-auto inline-flex h-12 flex-1 items-center justify-center gap-1.5 rounded-md bg-gradient-to-r from-brass to-[oklch(0.62_0.18_150)] font-semibold text-brass-foreground shadow-luxe tap-highlight active:scale-[0.99]"
           >
             {step === 0 ? "Get started" : step === 3 ? "Open Clipper" : "Continue"}
             <ChevronRight className="h-4 w-4" />
