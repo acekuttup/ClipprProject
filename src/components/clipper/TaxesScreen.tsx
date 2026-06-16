@@ -16,27 +16,60 @@ function escapeCsv(v: string) {
   return `"${v.replace(/"/g, '""')}"`;
 }
 
-function downloadCsv(incomes: IncomeEntry[], expenses: ExpenseEntry[], year: number) {
-  const rows = [["Type", "Date", "Amount", "Category / Method", "Note"]];
-  incomes.forEach((e) =>
+function downloadCsv(
+  incomes: IncomeEntry[],
+  expenses: ExpenseEntry[],
+  year: number,
+  businessName: string,
+) {
+  const totalIn = incomes.reduce((s, e) => s + e.amount, 0);
+  const totalOut = expenses.reduce((s, e) => s + e.amount, 0);
+  const net = totalIn - totalOut;
+  const generated = new Date().toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  const e = escapeCsv;
+  const blank = ["", "", "", "", ""];
+  const header = [
+    [e("CLIPPER BUSINESS LEDGER"), "", "", "", ""],
+    [e("Business"), e(businessName), "", e("Tax Year"), e(String(year))],
+    [e("Report Generated"), e(generated), "", "", ""],
+    blank,
+    [e("FINANCIAL SUMMARY"), "", "", "", ""],
+    [e("Total Income"), e(`$${totalIn.toFixed(2)}`), "", e("Total Expenses"), e(`$${totalOut.toFixed(2)}`)],
+    [e("Net Profit"), e(`$${net.toFixed(2)}`), "", "", ""],
+    blank,
+    [e("TRANSACTIONS"), "", "", "", ""],
+    [e("Type"), e("Date"), e("Amount ($)"), e("Category / Method"), e("Note")],
+  ];
+
+  const rows: string[][] = [];
+  const sortedIncome = [...incomes].sort((a, b) => +new Date(b.date) - +new Date(a.date));
+  const sortedExpenses = [...expenses].sort((a, b) => +new Date(b.date) - +new Date(a.date));
+
+  sortedIncome.forEach((entry) =>
     rows.push([
-      "Income",
-      new Date(e.date).toLocaleDateString("en-US"),
-      e.amount.toFixed(2),
-      PAYMENT_METHOD_LABELS[e.paymentMethod],
-      e.clientNote ?? "",
+      e("Income"),
+      e(new Date(entry.date).toLocaleDateString("en-US")),
+      e(entry.amount.toFixed(2)),
+      e(PAYMENT_METHOD_LABELS[entry.paymentMethod]),
+      e(entry.clientNote ?? ""),
     ]),
   );
-  expenses.forEach((e) =>
+  sortedExpenses.forEach((entry) =>
     rows.push([
-      "Expense",
-      new Date(e.date).toLocaleDateString("en-US"),
-      e.amount.toFixed(2),
-      CATEGORY_LABELS[e.category],
-      e.description ?? "",
+      e("Expense"),
+      e(new Date(entry.date).toLocaleDateString("en-US")),
+      e(entry.amount.toFixed(2)),
+      e(CATEGORY_LABELS[entry.category]),
+      e(entry.description ?? ""),
     ]),
   );
-  const csv = rows.map((r) => r.map(escapeCsv).join(",")).join("\n");
+
+  const csv = [...header, ...rows].map((r) => r.join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -53,55 +86,346 @@ async function downloadScheduleCPdf(opts: {
   net: number;
   seTax: number;
   byCat: Map<ExpenseCategory, number>;
+  byMethod: Map<PaymentMethod, number>;
+  businessName: string;
 }) {
   const { jsPDF } = await import("jspdf");
-  const doc = new jsPDF();
-  doc.setFontSize(18);
-  doc.text(`Clipper — Schedule C Summary`, 14, 20);
-  doc.setFontSize(11);
-  doc.setTextColor(120);
-  doc.text(`Tax year ${opts.year}`, 14, 27);
-  doc.setTextColor(20);
+  const doc = new jsPDF({ unit: "mm", format: "letter" });
 
-  doc.setFontSize(12);
-  let y = 40;
-  const line = (label: string, value: string) => {
-    doc.text(label, 14, y);
-    doc.text(value, 196, y, { align: "right" });
-    y += 8;
+  const W = 215.9;
+  const H = 279.4;
+  const M = 14; // margin
+  const CW = W - M * 2; // content width
+
+  // Brand palette (RGB)
+  const C = {
+    darkBg: [10, 15, 12] as [number, number, number],
+    accent: [55, 231, 128] as [number, number, number],
+    incomeGreen: [22, 163, 74] as [number, number, number],
+    expenseRed: [185, 28, 28] as [number, number, number],
+    textDark: [17, 24, 39] as [number, number, number],
+    textMid: [75, 85, 99] as [number, number, number],
+    textLight: [156, 163, 175] as [number, number, number],
+    border: [229, 231, 235] as [number, number, number],
+    rowAlt: [249, 250, 251] as [number, number, number],
+    incomeLight: [240, 253, 244] as [number, number, number],
+    expenseLight: [254, 242, 242] as [number, number, number],
+    white: [255, 255, 255] as [number, number, number],
   };
-  line("Gross income", fmtMoney(opts.totalIn));
-  line("Total expenses", fmtMoney(opts.totalOut));
-  line("Net profit", fmtMoney(opts.net));
-  line("Estimated SE tax", fmtMoney(opts.seTax));
 
-  y += 4;
-  doc.setDrawColor(200);
-  doc.line(14, y, 196, y);
-  y += 10;
-
-  doc.setFontSize(13);
-  doc.text("Deductions by Schedule C line", 14, y);
-  y += 8;
-  doc.setFontSize(11);
-  if (opts.byCat.size === 0) {
-    doc.setTextColor(140);
-    doc.text("No expenses logged.", 14, y);
-    doc.setTextColor(20);
-  }
-  [...opts.byCat.entries()].forEach(([cat, amount]) => {
-    doc.text(`${SCHEDULE_C_LINES[cat]} — ${CATEGORY_LABELS[cat]}`, 14, y);
-    doc.text(fmtMoney(amount), 196, y, { align: "right" });
-    y += 8;
+  const generated = new Date().toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
   });
 
-  y += 6;
+  let y = 0;
+
+  // Helper: check page space and add new page if needed
+  const ensureSpace = (need: number) => {
+    if (y + need > H - 18) {
+      doc.addPage();
+      y = 18;
+    }
+  };
+
+  // Helper: section header band
+  const sectionHeader = (label: string, color: [number, number, number], lightBg: [number, number, number]) => {
+    ensureSpace(14);
+    doc.setFillColor(...lightBg);
+    doc.rect(M, y, CW, 10, "F");
+    doc.setFillColor(...color);
+    doc.rect(M, y, 3, 10, "F");
+    doc.setTextColor(...color);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.text(label, M + 6, y + 6.5);
+    y += 14;
+  };
+
+  // ── HEADER BAR ─────────────────────────────────────
+  doc.setFillColor(...C.darkBg);
+  doc.rect(0, 0, W, 26, "F");
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(15);
+  doc.text("CLIPPER", M, 12);
+
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...C.accent);
+  doc.text("SCHEDULE C TAX REPORT", M, 19);
+
+  doc.setTextColor(200, 210, 205);
   doc.setFontSize(9);
-  doc.setTextColor(140);
+  doc.text(`Tax Year ${opts.year}`, W - M, 14, { align: "right" });
+  doc.setFontSize(7);
+  doc.text(generated, W - M, 20, { align: "right" });
+
+  y = 34;
+
+  // ── BUSINESS NAME + SUBTITLE ────────────────────────
+  doc.setTextColor(...C.textDark);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.text(opts.businessName || "Business Ledger", M, y);
+
+  y += 7;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(...C.textMid);
+  doc.text("Schedule C — Profit or Loss from Business (Form 1040)", M, y);
+  y += 5;
+  doc.text(`Prepared with Clipper  ·  Generated ${generated}`, M, y);
+
+  y += 8;
+  doc.setDrawColor(...C.border);
+  doc.setLineWidth(0.3);
+  doc.line(M, y, W - M, y);
+  y += 10;
+
+  // ── EXECUTIVE SUMMARY CARDS ─────────────────────────
+  doc.setTextColor(...C.textMid);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.text("EXECUTIVE SUMMARY", M, y);
+  y += 5;
+
+  const summaryCards = [
+    { label: "Gross Income", value: fmtMoney(opts.totalIn), color: C.incomeGreen },
+    { label: "Total Expenses", value: fmtMoney(opts.totalOut), color: C.expenseRed },
+    { label: "Net Profit", value: fmtMoney(opts.net), color: opts.net >= 0 ? C.incomeGreen : C.expenseRed },
+    { label: "SE Tax Estimate", value: fmtMoney(opts.seTax), color: C.textDark },
+  ];
+
+  const cardW = (CW - 4.5) / 4;
+  summaryCards.forEach((card, i) => {
+    const cx = M + i * (cardW + 1.5);
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(cx, y, cardW, 24, 2, 2, "F");
+    doc.setDrawColor(...C.border);
+    doc.setLineWidth(0.2);
+    doc.roundedRect(cx, y, cardW, 24, 2, 2, "S");
+    // Top accent stripe
+    doc.setFillColor(...card.color);
+    doc.rect(cx, y, cardW, 1.8, "F");
+    // Label
+    doc.setTextColor(...C.textLight);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.text(card.label, cx + cardW / 2, y + 9.5, { align: "center" });
+    // Value
+    doc.setTextColor(...card.color);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10.5);
+    doc.text(card.value, cx + cardW / 2, y + 18.5, { align: "center" });
+  });
+
+  y += 31;
+
+  // ── INCOME BY PAYMENT METHOD ────────────────────────
+  sectionHeader("INCOME BY PAYMENT METHOD", C.incomeGreen, C.incomeLight);
+
+  // Table columns
+  const c1 = M, c2 = M + CW * 0.52, c3 = M + CW * 0.73, c4 = W - M;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(...C.textMid);
+  doc.text("Payment Method", c1, y);
+  doc.text("Amount", c2, y);
+  doc.text("% of Income", c3, y);
+  doc.setDrawColor(...C.border);
+  doc.setLineWidth(0.25);
+  doc.line(M, y + 2.5, W - M, y + 2.5);
+  y += 8;
+
+  const methodEntries = [...opts.byMethod.entries()].sort((a, b) => b[1] - a[1]);
+
+  if (methodEntries.length === 0) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...C.textLight);
+    doc.text("No income recorded for this year.", c1, y);
+    y += 8;
+  } else {
+    methodEntries.forEach(([method, amount], idx) => {
+      ensureSpace(8);
+      if (idx % 2 === 0) {
+        doc.setFillColor(...C.rowAlt);
+        doc.rect(M, y - 4.5, CW, 7.5, "F");
+      }
+      const pct = opts.totalIn > 0 ? `${((amount / opts.totalIn) * 100).toFixed(1)}%` : "0%";
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...C.textDark);
+      doc.text(PAYMENT_METHOD_LABELS[method], c1, y);
+      doc.setTextColor(...C.incomeGreen);
+      doc.setFont("helvetica", "bold");
+      doc.text(fmtMoney(amount), c2, y);
+      doc.setTextColor(...C.textMid);
+      doc.setFont("helvetica", "normal");
+      doc.text(pct, c3, y);
+      y += 8;
+    });
+    // Totals row
+    ensureSpace(12);
+    doc.setDrawColor(...C.border);
+    doc.line(M, y - 2, W - M, y - 2);
+    doc.setFillColor(...C.incomeLight);
+    doc.rect(M, y - 1, CW, 9, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...C.textDark);
+    doc.text("Total Income", c1, y + 5);
+    doc.setTextColor(...C.incomeGreen);
+    doc.text(fmtMoney(opts.totalIn), c2, y + 5);
+    doc.setTextColor(...C.textMid);
+    doc.text("100%", c3, y + 5);
+    y += 14;
+  }
+
+  // ── DEDUCTIONS — SCHEDULE C ─────────────────────────
+  ensureSpace(30);
+  sectionHeader("DEDUCTIONS — SCHEDULE C CATEGORIES", C.expenseRed, C.expenseLight);
+
+  // Table header with 4 columns
+  const d1 = M, d2 = M + CW * 0.22, d3 = M + CW * 0.60, d4 = M + CW * 0.78;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(...C.textMid);
+  doc.text("Sch C Line", d1, y);
+  doc.text("Category", d2, y);
+  doc.text("Amount", d3, y);
+  doc.text("% of Expenses", d4, y);
+  doc.setDrawColor(...C.border);
+  doc.line(M, y + 2.5, W - M, y + 2.5);
+  y += 8;
+
+  const catEntries = [...opts.byCat.entries()].sort((a, b) => b[1] - a[1]);
+
+  if (catEntries.length === 0) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...C.textLight);
+    doc.text("No expenses recorded for this year.", d1, y);
+    y += 8;
+  } else {
+    catEntries.forEach(([cat, amount], idx) => {
+      ensureSpace(8);
+      if (idx % 2 === 0) {
+        doc.setFillColor(...C.rowAlt);
+        doc.rect(M, y - 4.5, CW, 7.5, "F");
+      }
+      const pct = opts.totalOut > 0 ? `${((amount / opts.totalOut) * 100).toFixed(1)}%` : "0%";
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(...C.textMid);
+      doc.text(SCHEDULE_C_LINES[cat], d1, y);
+      doc.setFontSize(9);
+      doc.setTextColor(...C.textDark);
+      doc.text(CATEGORY_LABELS[cat], d2, y);
+      doc.setTextColor(...C.expenseRed);
+      doc.setFont("helvetica", "bold");
+      doc.text(fmtMoney(amount), d3, y);
+      doc.setTextColor(...C.textMid);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text(pct, d4, y);
+      y += 8;
+    });
+    // Totals row
+    ensureSpace(12);
+    doc.setDrawColor(...C.border);
+    doc.line(M, y - 2, W - M, y - 2);
+    doc.setFillColor(...C.expenseLight);
+    doc.rect(M, y - 1, CW, 9, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...C.textDark);
+    doc.text("Total Deductions", d1, y + 5);
+    doc.setTextColor(...C.expenseRed);
+    doc.text(fmtMoney(opts.totalOut), d3, y + 5);
+    doc.setTextColor(...C.textMid);
+    doc.text("100%", d4, y + 5);
+    y += 14;
+  }
+
+  // ── NET PROFIT SUMMARY BAR ──────────────────────────
+  ensureSpace(26);
+  doc.setFillColor(...C.darkBg);
+  doc.roundedRect(M, y, CW, 22, 3, 3, "F");
+  // Left: Net Profit label + value
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(180, 200, 190);
+  doc.text("NET PROFIT / LOSS", M + 6, y + 7);
+  doc.setFontSize(16);
+  doc.setTextColor(...(opts.net >= 0 ? C.accent : [255, 100, 100] as [number, number, number]));
+  doc.text(fmtMoney(opts.net), M + 6, y + 17);
+  // Right: SE tax
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(160, 185, 170);
+  doc.text("SE Tax Estimate", W - M - 5, y + 7, { align: "right" });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(200, 220, 210);
+  doc.text(fmtMoney(opts.seTax), W - M - 5, y + 17, { align: "right" });
+  y += 30;
+
+  // ── FILING NOTES ────────────────────────────────────
+  ensureSpace(50);
+  doc.setTextColor(...C.textMid);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.text("SCHEDULE C FILING NOTES", M, y);
+  y += 6;
+
+  const notes = [
+    ["Report gross income on", "Schedule C, Part I, Line 1 (Gross receipts or sales)."],
+    ["List deductible business expenses in", "Schedule C, Part II, Lines 8–27."],
+    ["Self-employment tax (SE tax) is", "reported on Schedule SE. Half is deductible on Schedule 1, Line 15."],
+    ["Record retention:", "Keep all receipts and records for at least 7 years (IRS audit window)."],
+    ["Tips deduction:", "Barber tip credits may apply — ask your preparer about Sec. 45B."],
+  ];
+
+  notes.forEach(([label, detail]) => {
+    ensureSpace(7);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...C.textDark);
+    doc.text(`• ${label}`, M, y);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...C.textMid);
+    const labelW = doc.getTextWidth(`• ${label} `);
+    // Wrap detail on next line if combined is too long
+    doc.text(detail, M + 4, y + 5);
+    y += 12;
+  });
+
+  // ── FOOTER ──────────────────────────────────────────
+  // Draw on current page
+  const footerY = H - 12;
+  doc.setDrawColor(...C.border);
+  doc.setLineWidth(0.2);
+  doc.line(M, footerY - 4, W - M, footerY - 4);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(...C.textLight);
   doc.text(
-    "Generated by Clipper. Verify figures with a licensed tax preparer before filing.",
-    14,
-    y,
+    `Generated by Clipper  ·  ${generated}  ·  Tax Year ${opts.year}`,
+    W / 2,
+    footerY,
+    { align: "center" },
+  );
+  doc.text(
+    "For informational purposes only. Verify all figures with a licensed tax professional before filing.",
+    W / 2,
+    footerY + 4.5,
+    { align: "center" },
   );
 
   doc.save(`clipper-schedule-c-${opts.year}.pdf`);
@@ -110,6 +434,7 @@ async function downloadScheduleCPdf(opts: {
 export function TaxesScreen({ onPremium }: { onPremium: (f?: string) => void }) {
   const [store] = useClipperStore();
   const isPremium = store.user?.isPremium;
+  const businessName = store.profile?.name ?? store.user?.name ?? "My Business";
   const currentYear = new Date().getFullYear();
   const earliestYear = [...store.incomeEntries, ...store.expenseEntries].reduce(
     (min, e) => Math.min(min, new Date(e.date).getFullYear()),
@@ -255,11 +580,11 @@ export function TaxesScreen({ onPremium }: { onPremium: (f?: string) => void }) 
               <div key={m}>
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium">{PAYMENT_METHOD_LABELS[m]}</span>
-                  <span className="font-display">{fmtMoney(v)}</span>
+                  <span className="font-display text-success">{fmtMoney(v)}</span>
                 </div>
                 <div className="mt-1 h-1 rounded-full bg-muted">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-brass to-[oklch(0.5_0.15_148)]"
+                    className="h-full rounded-full bg-success/70"
                     style={{ width: `${pct}%` }}
                   />
                 </div>
@@ -304,7 +629,7 @@ export function TaxesScreen({ onPremium }: { onPremium: (f?: string) => void }) 
           {[...byCat.entries()].map(([c, v]) => (
             <div key={c} className="flex items-center justify-between py-2 text-sm">
               <span>{CATEGORY_LABELS[c]}</span>
-              <span className="font-display">{fmtMoney(v)}</span>
+              <span className="font-display text-destructive">{fmtMoney(v)}</span>
             </div>
           ))}
           {[...byCat.entries()].length === 0 && (
@@ -321,14 +646,14 @@ export function TaxesScreen({ onPremium }: { onPremium: (f?: string) => void }) 
           locked={!isPremium}
           onClick={() =>
             isPremium
-              ? downloadScheduleCPdf({ year, totalIn, totalOut, net, seTax, byCat })
+              ? downloadScheduleCPdf({ year, totalIn, totalOut, net, seTax, byCat, byMethod, businessName })
               : onPremium("Schedule C PDF export")
           }
         />
         <ExportBtn
           icon={<FileDown className="h-4 w-4" />}
           label="CSV records"
-          onClick={() => downloadCsv(incomes, expenses, year)}
+          onClick={() => downloadCsv(incomes, expenses, year, businessName)}
         />
       </div>
     </div>

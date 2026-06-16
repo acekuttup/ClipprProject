@@ -123,6 +123,34 @@ export function SettingsScreen({
         </button>
       )}
 
+      {isPremium && (
+        <div className="relative overflow-hidden rounded-2xl border border-brass/25 bg-gradient-to-br from-brass/10 via-card to-card p-5">
+          <div
+            className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full blur-3xl"
+            style={{ background: "oklch(0.82 0.2 152 / 0.15)" }}
+          />
+          <div className="relative flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-brass to-[oklch(0.62_0.18_150)] shadow-luxe">
+              <Crown className="h-5 w-5 text-brass-foreground" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-display text-base">Premium Member</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-brass/20 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-brass">
+                  Active
+                </span>
+              </div>
+              <div className="text-xs text-muted-foreground">All features unlocked</div>
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-2 border-t border-brass/15 pt-4 text-center">
+            <PremiumStat label="Bank Sync" icon="⚡" />
+            <PremiumStat label="PDF Export" icon="📄" />
+            <PremiumStat label="Auto Trips" icon="🗺" />
+          </div>
+        </div>
+      )}
+
       <Section label="Trip Detection" icon={<MapPin className="h-4 w-4" />}>
         <Row
           label="Work Location"
@@ -390,6 +418,15 @@ function Mini({ label, value }: { label: string; value: string }) {
     <div>
       <div className="font-display text-base">{value}</div>
       <div className="text-[9px] uppercase tracking-widest text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+function PremiumStat({ label, icon }: { label: string; icon: string }) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <span className="text-lg">{icon}</span>
+      <span className="text-[9px] font-medium uppercase tracking-wider text-brass/80">{label}</span>
     </div>
   );
 }

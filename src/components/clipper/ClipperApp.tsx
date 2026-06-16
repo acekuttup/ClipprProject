@@ -3,6 +3,7 @@ import { Home, History, Inbox, FileText, Settings as SettingsIcon } from "lucide
 import { useClipperStore, applyBoothRentAutoLog } from "@/lib/clipper-store";
 import { OnboardingFlow } from "@/components/clipper/Onboarding";
 import { AuthModal } from "@/components/clipper/AuthModal";
+import { SplashScreen } from "@/components/clipper/SplashScreen";
 import { Walkthrough } from "@/components/clipper/Walkthrough";
 import { HomeScreen } from "@/components/clipper/HomeScreen";
 import { HistoryScreen } from "@/components/clipper/HistoryScreen";
@@ -22,6 +23,7 @@ export function ClipperApp() {
   const [logIncome, setLogIncome] = useState(false);
   const [logExpense, setLogExpense] = useState(false);
   const [logMiles, setLogMiles] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
   const premium = usePremiumGate();
 
   // Open auth modal right after onboarding if no user
@@ -62,14 +64,20 @@ export function ClipperApp() {
             <ClipperMark size={26} className="text-brass" />
             <ClipperWordmark />
           </div>
-          <div className="flex items-center gap-1.5">
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${store.user?.isPremium ? "bg-brass shadow-[0_0_8px_var(--color-brass)]" : "bg-muted-foreground/50"}`}
-            />
-            <span className="font-eyebrow text-[9px]">
-              {store.user?.isPremium ? "Premium" : "Free"}
-            </span>
-          </div>
+          {store.user?.isPremium ? (
+            <div className="flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-brass shadow-[0_0_8px_var(--color-brass)]" />
+              <span className="font-eyebrow text-[9px]">Premium</span>
+            </div>
+          ) : (
+            <button
+              onClick={() => premium.gate("Upgrade to Premium")}
+              className="flex items-center gap-1.5 rounded-full border border-border/60 px-2 py-1 tap-highlight hover:border-brass/40 hover:bg-brass/5"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />
+              <span className="font-eyebrow text-[9px]">Free</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -141,6 +149,7 @@ export function ClipperApp() {
       </nav>
 
       {/* Overlays */}
+      {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
       <OnboardingFlow />
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
       <Walkthrough />

@@ -273,7 +273,7 @@ export function HomeScreen({ onLogIncome, onLogExpense, onLogMiles, onPremium }:
                       </div>
                     </div>
                     <div
-                      className={`font-mono text-sm tabular-nums ${isIncome ? "text-brass" : "text-foreground/80"}`}
+                      className={`font-mono text-sm tabular-nums ${isIncome ? "text-success" : "text-destructive"}`}
                     >
                       {isIncome ? "+" : "−"}
                       {fmtMoney(e.amount)}
@@ -307,7 +307,7 @@ function MiniStat({
     <div className={className}>
       <div className="font-eyebrow">{label}</div>
       <div
-        className={`mt-1 font-display text-2xl font-light tabular-nums ${tone === "up" ? "text-brass" : "text-foreground/85"}`}
+        className={`mt-1 font-display text-2xl font-light tabular-nums ${tone === "up" ? "text-success" : "text-destructive"}`}
       >
         {value}
       </div>
