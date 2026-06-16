@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { X, Delete } from "lucide-react";
+import { createPortal } from "react-dom";
+import { useEffect, useRef, useState } from "react";
+import { X, Delete, Trash2, Camera } from "lucide-react";
 import {
   useClipperStore,
   uid,
@@ -7,9 +8,11 @@ import {
   CATEGORY_LABELS,
   type PaymentMethod,
   type ExpenseCategory,
+  type IncomeEntry,
+  type ExpenseEntry,
 } from "@/lib/clipper-store";
 
-function Numpad({ onKey }: { onKey: (k: string) => void }) {
+export function Numpad({ onKey }: { onKey: (k: string) => void }) {
   const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "back"];
   return (
     <div className="grid grid-cols-3 gap-1.5">
@@ -27,8 +30,8 @@ function Numpad({ onKey }: { onKey: (k: string) => void }) {
   );
 }
 
-function useAmount() {
-  const [v, setV] = useState("0");
+export function useAmount(initial = "0") {
+  const [v, setV] = useState(initial);
   const press = (k: string) => {
     if (k === "back") {
       setV((s) => (s.length <= 1 ? "0" : s.slice(0, -1)));
@@ -38,59 +41,163 @@ function useAmount() {
       setV((s) => (s === "0" ? k : s + k));
     }
   };
-  return { v, press, num: Number(v) || 0, reset: () => setV("0") };
+  return { v, press, num: Number(v) || 0, reset: () => setV("0"), set: setV };
 }
 
-function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-end bg-black/70 backdrop-blur-sm">
-      <div className="w-full card-luxe rounded-b-none p-5 pb-8 animate-in slide-in-from-bottom duration-300">
-        <div className="mb-4 flex items-center justify-between">
+// Sheet — bottom-sheet modal portalled to document.body so it's never clipped by
+// an ancestor transform (e.g. the rise-in tab animation). Scrollable content zone
+// above a pinned footer keeps the numpad always visible. Backdrop tap dismisses.
+export function Sheet({
+  open,
+  onClose,
+  title,
+  children,
+  footer,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+}) {
+  if (!open || typeof document === "undefined") return null;
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="flex w-full max-w-[480px] max-h-[92dvh] flex-col card-luxe rounded-b-none animate-in slide-in-from-bottom duration-300"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Fixed header */}
+        <div className="flex flex-shrink-0 items-center justify-between px-5 pt-5 pb-3">
           <div className="font-display text-xl">{title}</div>
-          <button onClick={onClose} className="rounded-full p-2 text-muted-foreground hover:bg-accent" aria-label="Close">
+          <button
+            onClick={onClose}
+            className="rounded-full p-2 text-muted-foreground hover:bg-accent"
+            aria-label="Close"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
-        {children}
+        {/* Scrollable form content */}
+        <div className="flex-1 overflow-y-auto px-5 pb-2">
+          {children}
+        </div>
+        {/* Pinned footer — numpad + actions stay visible always */}
+        {footer && (
+          <div
+            className="flex-shrink-0 border-t border-border/40 px-5 pt-4"
+            style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}
+          >
+            {footer}
+          </div>
+        )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
-export function LogIncomeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function LogIncomeModal({
+  open,
+  onClose,
+  entry,
+}: {
+  open: boolean;
+  onClose: () => void;
+  entry?: IncomeEntry;
+}) {
   const [store, setStore] = useClipperStore();
   const amt = useAmount();
-  const [method, setMethod] = useState<PaymentMethod>(store.settings.preferredPaymentMethods[0] ?? "cash");
+  const [method, setMethod] = useState<PaymentMethod>(
+    store.settings.preferredPaymentMethods[0] ?? "cash",
+  );
   const [note, setNote] = useState("");
   const [isTip, setIsTip] = useState(false);
+  const isEdit = !!entry;
+
+  useEffect(() => {
+    if (!open) return;
+    if (entry) {
+      amt.set(String(entry.amount));
+      setMethod(entry.paymentMethod);
+      setNote(entry.clientNote ?? "");
+      setIsTip(!!entry.isTip);
+    } else {
+      amt.reset();
+      setMethod(store.settings.preferredPaymentMethods[0] ?? "cash");
+      setNote("");
+      setIsTip(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, entry?.id]);
 
   const save = () => {
     if (amt.num <= 0) return;
-    setStore((s) => ({
-      ...s,
-      incomeEntries: [
-        ...s.incomeEntries,
-        {
-          id: uid(),
-          amount: amt.num,
-          date: new Date().toISOString(),
-          paymentMethod: method,
-          clientNote: note || undefined,
-          source: "manual",
-          confirmed: true,
-          isTip,
-        },
-      ],
-    }));
-    amt.reset();
-    setNote("");
-    setIsTip(false);
+    if (isEdit && entry) {
+      setStore((s) => ({
+        ...s,
+        incomeEntries: s.incomeEntries.map((e) =>
+          e.id === entry.id
+            ? { ...e, amount: amt.num, paymentMethod: method, clientNote: note || undefined, isTip }
+            : e,
+        ),
+      }));
+    } else {
+      setStore((s) => ({
+        ...s,
+        incomeEntries: [
+          ...s.incomeEntries,
+          {
+            id: uid(),
+            amount: amt.num,
+            date: new Date().toISOString(),
+            paymentMethod: method,
+            clientNote: note || undefined,
+            source: "manual",
+            confirmed: true,
+            isTip,
+          },
+        ],
+      }));
+    }
+    onClose();
+  };
+
+  const remove = () => {
+    if (!entry) return;
+    setStore((s) => ({ ...s, incomeEntries: s.incomeEntries.filter((e) => e.id !== entry.id) }));
     onClose();
   };
 
   return (
-    <Sheet open={open} onClose={onClose} title="Log income">
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={isEdit ? "Edit income" : "Log income"}
+      footer={
+        <div>
+          <Numpad onKey={amt.press} />
+          <button
+            onClick={save}
+            disabled={amt.num <= 0}
+            className="mt-4 h-12 w-full rounded-md bg-gradient-to-r from-brass to-[oklch(0.62_0.18_150)] font-semibold text-brass-foreground shadow-luxe tap-highlight disabled:opacity-40"
+          >
+            {isEdit ? "Save changes" : "Save income"}
+          </button>
+          {isEdit && (
+            <button
+              onClick={remove}
+              className="mt-2 flex h-11 w-full items-center justify-center gap-1.5 rounded-md text-xs text-destructive/80 tap-highlight hover:text-destructive"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Delete entry
+            </button>
+          )}
+        </div>
+      }
+    >
       <div className="mb-4 text-center">
         <div className="font-display text-5xl text-success">${amt.v}</div>
       </div>
@@ -100,7 +207,9 @@ export function LogIncomeModal({ open, onClose }: { open: boolean; onClose: () =
             key={m}
             onClick={() => setMethod(m)}
             className={`h-9 rounded-full border px-3 text-xs font-medium ${
-              method === m ? "border-brass/70 bg-brass/15 text-foreground" : "border-border text-muted-foreground"
+              method === m
+                ? "border-brass/70 bg-brass/15 text-foreground"
+                : "border-border text-muted-foreground"
             }`}
           >
             {PAYMENT_METHOD_LABELS[m]}
@@ -116,57 +225,134 @@ export function LogIncomeModal({ open, onClose }: { open: boolean; onClose: () =
       <label className="mb-4 flex items-center justify-between rounded-md border border-border bg-card/60 p-3">
         <div>
           <div className="text-sm font-medium">This is a tip</div>
-          <div className="text-[11px] text-muted-foreground">2025: deductible up to $25K on Schedule 1-A</div>
+          <div className="text-[11px] text-muted-foreground">
+            2025: deductible up to $25K on Schedule 1-A
+          </div>
         </div>
         <button
           onClick={() => setIsTip((v) => !v)}
           className={`relative h-6 w-11 rounded-full transition ${isTip ? "bg-brass" : "bg-muted"}`}
         >
-          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-background transition-all ${isTip ? "left-5" : "left-0.5"}`} />
+          <span
+            className={`absolute top-0.5 h-5 w-5 rounded-full bg-background transition-all ${isTip ? "left-5" : "left-0.5"}`}
+          />
         </button>
       </label>
-      <Numpad onKey={amt.press} />
-      <button
-        onClick={save}
-        disabled={amt.num <= 0}
-        className="mt-4 h-12 w-full rounded-md bg-gradient-to-r from-brass to-[oklch(0.62_0.18_150)] font-semibold text-brass-foreground shadow-luxe tap-highlight disabled:opacity-40"
-      >
-        Save income
-      </button>
     </Sheet>
   );
 }
 
-export function LogExpenseModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function LogExpenseModal({
+  open,
+  onClose,
+  entry,
+}: {
+  open: boolean;
+  onClose: () => void;
+  entry?: ExpenseEntry;
+}) {
   const [, setStore] = useClipperStore();
   const amt = useAmount();
   const [cat, setCat] = useState<ExpenseCategory>("clippers");
   const [desc, setDesc] = useState("");
+  const [photo, setPhoto] = useState<string | undefined>(undefined);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const isEdit = !!entry;
+
+  useEffect(() => {
+    if (!open) return;
+    if (entry) {
+      amt.set(String(entry.amount));
+      setCat(entry.category);
+      setDesc(entry.description ?? "");
+      setPhoto(entry.photoDataUrl);
+    } else {
+      amt.reset();
+      setCat("clippers");
+      setDesc("");
+      setPhoto(undefined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, entry?.id]);
+
+  const onPhotoChange = (file: File | undefined) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setPhoto(reader.result as string);
+    reader.readAsDataURL(file);
+  };
 
   const save = () => {
     if (amt.num <= 0) return;
-    setStore((s) => ({
-      ...s,
-      expenseEntries: [
-        ...s.expenseEntries,
-        {
-          id: uid(),
-          amount: amt.num,
-          date: new Date().toISOString(),
-          category: cat,
-          description: desc || undefined,
-        },
-      ],
-    }));
-    amt.reset();
-    setDesc("");
+    if (isEdit && entry) {
+      setStore((s) => ({
+        ...s,
+        expenseEntries: s.expenseEntries.map((e) =>
+          e.id === entry.id
+            ? {
+                ...e,
+                amount: amt.num,
+                category: cat,
+                description: desc || undefined,
+                photoDataUrl: photo,
+              }
+            : e,
+        ),
+      }));
+    } else {
+      setStore((s) => ({
+        ...s,
+        expenseEntries: [
+          ...s.expenseEntries,
+          {
+            id: uid(),
+            amount: amt.num,
+            date: new Date().toISOString(),
+            category: cat,
+            description: desc || undefined,
+            photoDataUrl: photo,
+          },
+        ],
+      }));
+    }
     onClose();
   };
 
-  const cats: ExpenseCategory[] = ["clippers", "products", "gas", "boothRent", "education", "other"];
+  const remove = () => {
+    if (!entry) return;
+    setStore((s) => ({ ...s, expenseEntries: s.expenseEntries.filter((e) => e.id !== entry.id) }));
+    onClose();
+  };
+
+  // boothRent excluded — auto-logged by the booth rent config, not entered manually
+  const cats: ExpenseCategory[] = ["clippers", "products", "gas", "education", "other"];
 
   return (
-    <Sheet open={open} onClose={onClose} title="Log expense">
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={isEdit ? "Edit expense" : "Log expense"}
+      footer={
+        <div>
+          <Numpad onKey={amt.press} />
+          <button
+            onClick={save}
+            disabled={amt.num <= 0}
+            className="mt-4 h-12 w-full rounded-md bg-gradient-to-r from-brass to-[oklch(0.62_0.18_150)] font-semibold text-brass-foreground shadow-luxe disabled:opacity-40"
+          >
+            {isEdit ? "Save changes" : "Save expense"}
+          </button>
+          {isEdit && (
+            <button
+              onClick={remove}
+              className="mt-2 flex h-11 w-full items-center justify-center gap-1.5 rounded-md text-xs text-destructive/80 tap-highlight hover:text-destructive"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Delete entry
+            </button>
+          )}
+        </div>
+      }
+    >
       <div className="mb-4 text-center">
         <div className="font-display text-5xl text-destructive">−${amt.v}</div>
       </div>
@@ -176,7 +362,9 @@ export function LogExpenseModal({ open, onClose }: { open: boolean; onClose: () 
             key={c}
             onClick={() => setCat(c)}
             className={`h-12 rounded-md border px-3 text-left text-sm font-medium ${
-              cat === c ? "border-brass/70 bg-brass/10 text-foreground" : "border-border text-muted-foreground bg-card/60"
+              cat === c
+                ? "border-brass/70 bg-brass/10 text-foreground"
+                : "border-border text-muted-foreground bg-card/60"
             }`}
           >
             {CATEGORY_LABELS[c]}
@@ -189,17 +377,42 @@ export function LogExpenseModal({ open, onClose }: { open: boolean; onClose: () 
         placeholder="Description (optional) — e.g. Andis Master Clipper"
         className="mb-3 h-11 w-full rounded-md border border-border bg-input/70 px-3 text-sm outline-none focus:border-brass/60"
       />
-      <div className="mb-3 rounded-md border border-dashed border-border bg-card/40 p-3 text-center text-xs text-muted-foreground">
-        Tap to attach receipt photo
-        <div className="mt-0.5 text-[10px] text-brass">PREMIUM · Receipt vault</div>
-      </div>
-      <Numpad onKey={amt.press} />
+      {/* No capture attr — lets iOS show "Take Photo or Choose from Library" */}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => onPhotoChange(e.target.files?.[0])}
+      />
       <button
-        onClick={save}
-        disabled={amt.num <= 0}
-        className="mt-4 h-12 w-full rounded-md bg-gradient-to-r from-brass to-[oklch(0.62_0.18_150)] font-semibold text-brass-foreground shadow-luxe disabled:opacity-40"
+        type="button"
+        onClick={() => fileRef.current?.click()}
+        className="mb-3 flex w-full items-center gap-3 rounded-md border border-dashed border-border bg-card/40 p-3 text-left text-xs text-muted-foreground tap-highlight"
       >
-        Save expense
+        {photo ? (
+          <img src={photo} alt="Receipt" className="h-10 w-10 rounded-md object-cover" />
+        ) : (
+          <span className="grid h-10 w-10 place-items-center rounded-md bg-card text-brass">
+            <Camera className="h-4 w-4" />
+          </span>
+        )}
+        <span className="flex-1">
+          {photo ? "Receipt attached — tap to replace" : "Tap to attach receipt photo"}
+        </span>
+        {photo && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setPhoto(undefined);
+            }}
+            className="rounded-full p-1.5 hover:bg-accent"
+            aria-label="Remove photo"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
       </button>
     </Sheet>
   );
@@ -249,7 +462,9 @@ export function LogMilesModal({ open, onClose }: { open: boolean; onClose: () =>
             className="mb-2 h-14 w-full rounded-md border border-brass/40 bg-brass/10 text-left tap-highlight"
           >
             <div className="px-4 font-semibold">Yes — barber business trip</div>
-            <div className="px-4 text-xs text-muted-foreground">Supply runs · house calls · classes · 2nd location</div>
+            <div className="px-4 text-xs text-muted-foreground">
+              Supply runs · house calls · classes · 2nd location
+            </div>
           </button>
           <button
             onClick={() => setStep(2)}
@@ -258,8 +473,8 @@ export function LogMilesModal({ open, onClose }: { open: boolean; onClose: () =>
             Personal trip
           </button>
           <p className="mt-3 rounded-md border border-warning/30 bg-warning/5 p-3 text-[11px] text-muted-foreground">
-            <strong className="text-warning">Heads up:</strong> commuting from home to your regular barbershop is NOT
-            deductible. Only trips beyond your main shop qualify.
+            <strong className="text-warning">Heads up:</strong> commuting from home to your regular
+            barbershop is NOT deductible. Only trips beyond your main shop qualify.
           </p>
         </div>
       )}
@@ -280,7 +495,10 @@ export function LogMilesModal({ open, onClose }: { open: boolean; onClose: () =>
             <span className="brass-text font-semibold">
               ${((Number(miles) || 0) * store.settings.mileageRatePerMile).toFixed(2)}
             </span>
-            <span className="text-muted-foreground"> · {store.settings.mileageRatePerMile.toFixed(2)}/mi (2025 IRS)</span>
+            <span className="text-muted-foreground">
+              {" "}
+              · {store.settings.mileageRatePerMile.toFixed(2)}/mi (2025 IRS)
+            </span>
           </div>
           <button
             onClick={save}
@@ -294,9 +512,13 @@ export function LogMilesModal({ open, onClose }: { open: boolean; onClose: () =>
       {step === 2 && (
         <div>
           <p className="text-sm text-muted-foreground">
-            Personal trips aren't deductible — nothing was logged. You can always reclassify later if it was actually for work.
+            Personal trips aren't deductible — nothing was logged. You can always reclassify later
+            if it was actually for work.
           </p>
-          <button onClick={close} className="mt-4 h-12 w-full rounded-md border border-border text-sm">
+          <button
+            onClick={close}
+            className="mt-4 h-12 w-full rounded-md border border-border text-sm"
+          >
             Got it
           </button>
         </div>

@@ -90,6 +90,20 @@
   html, body, #root {
     height: 100%;
   }
+  html {
+    background: oklch(0.08 0.005 160);
+    overscroll-behavior: none;
+    scrollbar-width: none;
+  }
+  html::-webkit-scrollbar {
+    display: none;
+  }
+  * {
+    scrollbar-width: none;
+  }
+  *::-webkit-scrollbar {
+    display: none;
+  }
   body {
     background: var(--gradient-onyx);
     background-attachment: fixed;
@@ -98,7 +112,7 @@
     font-feature-settings: "ss01", "cv11";
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
-    overscroll-behavior-y: none;
+    overscroll-behavior: none;
   }
   h1, h2, h3, .font-display {
     font-family: var(--font-display);

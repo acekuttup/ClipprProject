@@ -22,6 +22,7 @@ export interface ExpenseEntry {
   category: ExpenseCategory;
   description?: string;
   photoFileName?: string;
+  photoDataUrl?: string;
   miles?: number;
   tripType?: "business" | "personal";
   startLocation?: string;
@@ -48,6 +49,7 @@ export interface AppSettings {
   preferredPaymentMethods: PaymentMethod[];
   workLocationName?: string;
   workCoords?: { lat: number; lng: number };
+  monthlyIncomeGoal?: number;
 }
 
 export interface BoothRentConfig {
@@ -55,6 +57,7 @@ export interface BoothRentConfig {
   frequency: "weekly" | "monthly" | "custom";
   dayOfWeek?: number;
   active: boolean;
+  lastLoggedDate?: string;
 }
 
 export interface AuthUser {
@@ -179,3 +182,36 @@ export const SCHEDULE_C_LINES: Record<ExpenseCategory, string> = {
   education: "Line 27b",
   other: "Line 27b",
 };
+
+// Creates booth-rent expense entries for any cycle that has come due since
+// the config's lastLoggedDate, capped to avoid runaway backfill after long absences.
+export function applyBoothRentAutoLog(s: ClipperStore): ClipperStore {
+  const cfg = s.boothRentConfig;
+  if (!cfg || !cfg.active || cfg.frequency === "custom" || !cfg.lastLoggedDate) return s;
+  const now = new Date();
+  let cursor = new Date(cfg.lastLoggedDate);
+  const newEntries: ExpenseEntry[] = [];
+  let guard = 0;
+  while (guard < 24) {
+    const next = new Date(cursor);
+    if (cfg.frequency === "weekly") next.setDate(next.getDate() + 7);
+    else next.setMonth(next.getMonth() + 1);
+    if (next > now) break;
+    newEntries.push({
+      id: uid(),
+      amount: cfg.amount,
+      date: next.toISOString(),
+      category: "boothRent",
+      description: "Booth rent (auto)",
+      autoLogged: true,
+    });
+    cursor = next;
+    guard++;
+  }
+  if (newEntries.length === 0) return s;
+  return {
+    ...s,
+    expenseEntries: [...s.expenseEntries, ...newEntries],
+    boothRentConfig: { ...cfg, lastLoggedDate: cursor.toISOString() },
+  };
+}
