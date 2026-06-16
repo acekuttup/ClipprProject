@@ -152,7 +152,7 @@ export function ClipperApp() {
       {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
       <OnboardingFlow />
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
-      <Walkthrough />
+      <Walkthrough setTab={switchTab} />
       <LogIncomeModal open={logIncome} onClose={() => setLogIncome(false)} />
       <LogExpenseModal open={logExpense} onClose={() => setLogExpense(false)} />
       <LogMilesModal open={logMiles} onClose={() => setLogMiles(false)} />
